@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+}
+
+enum TriggerType {
+  WEBHOOK
+  MANUAL
+  SCHEDULE
+}
+
+enum StepType {
+  OPENAI_TEXT
+  HTTP_REQUEST
+  FILTER
+  TRANSFORM
+}
+
+enum ExecutionStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String?
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships OrganizationMember[]
+  sessions    Session[]
+  auditLogs   AuditLog[]
+
+  @@index([email])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members    OrganizationMember[]
+  workflows  Workflow[]
+  executions WorkflowExecution[]
+  apiKeys    ApiKey[]
+  auditLogs  AuditLog[]
+
+  @@index([slug])
+}
+
+model OrganizationMember {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  role           Role     @default(MEMBER)
+  createdAt      DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+model Workflow {
+  id             String         @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  status         WorkflowStatus @default(DRAFT)
+  triggerType    TriggerType
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  steps        WorkflowStep[]
+  executions   WorkflowExecution[]
+  webhook      WebhookEndpoint?
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+model WorkflowStep {
+  id         String   @id @default(cuid())
+  workflowId String
+  position   Int
+  type       StepType
+  name       String
+  config     Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  workflow       Workflow                @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  executionSteps WorkflowExecutionStep[]
+
+  @@unique([workflowId, position])
+  @@index([workflowId])
+}
+
+model WebhookEndpoint {
+  id          String   @id @default(cuid())
+  workflowId  String   @unique
+  tokenHash   String   @unique
+  tokenPrefix String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([tokenPrefix])
+}
+
+model WorkflowExecution {
+  id             String          @id @default(cuid())
+  organizationId String
+  workflowId     String
+  status         ExecutionStatus @default(QUEUED)
+  inputData      Json?
+  outputData     Json?
+  errorMessage   String?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime        @default(now())
+
+  organization Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workflow     Workflow                @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  steps        WorkflowExecutionStep[]
+
+  @@index([organizationId])
+  @@index([workflowId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model WorkflowExecutionStep {
+  id           String          @id @default(cuid())
+  executionId  String
+  stepId       String?
+  position     Int
+  stepName     String
+  stepType     StepType
+  status       ExecutionStatus
+  inputData    Json?
+  outputData   Json?
+  errorMessage String?
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  createdAt    DateTime @default(now())
+
+  execution WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  step      WorkflowStep?     @relation(fields: [stepId], references: [id], onDelete: SetNull)
+
+  @@index([executionId])
+  @@index([stepId])
+  @@index([status])
+}
+
+model ApiKey {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  keyHash        String    @unique
+  keyPrefix      String
+  lastUsedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  revokedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([keyPrefix])
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  action         String
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}

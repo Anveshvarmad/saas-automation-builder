@@ -1,0 +1,38 @@
+services:
+  web:
+    build: .
+    container_name: saas_builder_web
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/saas_builder
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    command: npm run dev
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: saas_builder_postgres
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: saas_builder
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: saas_builder_redis
+    ports:
+      - "6380:6379"
+
+volumes:
+  postgres_data:
