@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+cat > README.md <<'EOF'
+# SaaS Automation Builder
 
-## Getting Started
+A full-stack AI workflow automation platform where users can create workflows, trigger them through secure webhooks, process jobs with a Redis-backed background worker, and store OpenAI-generated execution results with full audit history.
 
-First, run the development server:
+This project demonstrates production-style backend architecture using Next.js, PostgreSQL, Prisma, Redis, BullMQ, Docker, and OpenAI APIs.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- User signup and login with custom session authentication
+- Organization-based multi-tenant data model
+- Workflow creation and management
+- Secure webhook trigger URLs
+- Webhook secret rotation using hashed secrets
+- Redis/BullMQ background job processing
+- OpenAI-powered workflow step execution
+- Execution history with input/output JSON
+- Retry support for failed executions
+- Audit logs for important organization activity
+- Dashboard with workflow and execution metrics
+- Polished landing page and demo guide
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+| Area | Technology |
+|---|---|
+| Frontend | Next.js App Router, TypeScript, Tailwind CSS |
+| Backend | Next.js API Routes |
+| Database | PostgreSQL |
+| ORM | Prisma |
+| Queue | Redis, BullMQ |
+| AI | OpenAI API |
+| Auth | Custom session auth with HTTP-only cookies |
+| Infrastructure | Docker Compose |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Architecture
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```mermaid
+flowchart TD
+    A[User Browser] --> B[Next.js App]
+    B --> C[PostgreSQL via Prisma]
+    B --> D[Redis Queue]
+    E[External Webhook Client] --> F[Webhook API Route]
+    F --> C
+    F --> D
+    D --> G[Workflow Worker]
+    G --> C
+    G --> H[OpenAI API]
+    H --> G
+    G --> C
