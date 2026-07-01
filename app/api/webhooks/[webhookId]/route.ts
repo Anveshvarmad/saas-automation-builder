@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { enqueueWorkflowExecution } from "../../../../lib/workflow-queue";
+import { verifyWebhookSecret } from "../../../../lib/webhook-secret";
 
 export async function POST(
   request: Request,
@@ -30,6 +31,23 @@ export async function POST(
       return NextResponse.json(
         { error: "Webhook endpoint not found." },
         { status: 404 }
+      );
+    }
+
+    const providedSecret = request.headers.get("x-webhook-secret");
+
+    const isValidSecret = verifyWebhookSecret({
+      providedSecret,
+      storedHash: webhook.tokenHash,
+    });
+
+    if (!isValidSecret) {
+      return NextResponse.json(
+        {
+          error:
+            "Invalid or missing webhook secret. Include x-webhook-secret header.",
+        },
+        { status: 401 }
       );
     }
 
@@ -86,6 +104,7 @@ export async function POST(
             workflowId: webhook.workflow.id,
             workflowName: webhook.workflow.name,
             executionId: createdExecution.id,
+            tokenPrefix: webhook.tokenPrefix,
           },
         },
       });

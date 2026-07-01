@@ -1,4 +1,5 @@
 import Link from "next/link";
+import WebhookSecretManager from "./webhook-secret-manager";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "../../../lib/prisma";
 import { getCurrentTenant } from "../../../lib/tenant";
@@ -160,13 +161,20 @@ export default async function WorkflowDetailPage({
             <pre className="mt-2 overflow-x-auto rounded-lg bg-slate-950 p-4 text-sm text-slate-100">
 {`curl -X POST ${webhookUrl} \\
   -H "Content-Type: application/json" \\
+  -H "x-webhook-secret: YOUR_WEBHOOK_SECRET" \\
   -d '{
     "leadName": "John Smith",
     "email": "john@example.com",
     "company": "Enterprise Cloud Inc",
     "message": "I am interested in your enterprise plan"
   }'`}
-            </pre>
+</pre>
+
+<WebhookSecretManager
+  webhookId={workflow.webhook!.id}
+  tokenPrefix={workflow.webhook!.tokenPrefix}
+/>
+
           </section>
         )}
 
