@@ -1,17 +1,42 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "../../../lib/prisma";
 import { getCurrentTenant } from "../../../lib/tenant";
 import DeleteWorkflowButton from "./delete-workflow-button";
 
-type WorkflowDetailPageProps = {
-  params: Promise<{
-    id: string;
-  }>;
-};
+function getStatusClass(status: string) {
+  if (status === "ACTIVE") {
+    return "border-green-200 bg-green-50 text-green-700";
+  }
+
+  if (status === "PAUSED") {
+    return "border-yellow-200 bg-yellow-50 text-yellow-700";
+  }
+
+  return "border-slate-200 bg-slate-50 text-slate-700";
+}
+
+function getExecutionStatusClass(status: string) {
+  if (status === "SUCCESS") {
+    return "border-green-200 bg-green-50 text-green-700";
+  }
+
+  if (status === "FAILED") {
+    return "border-red-200 bg-red-50 text-red-700";
+  }
+
+  if (status === "RUNNING") {
+    return "border-blue-200 bg-blue-50 text-blue-700";
+  }
+
+  return "border-yellow-200 bg-yellow-50 text-yellow-700";
+}
 
 export default async function WorkflowDetailPage({
   params,
-}: WorkflowDetailPageProps) {
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const tenant = await getCurrentTenant();
 
   if (!tenant) {
@@ -51,96 +76,102 @@ export default async function WorkflowDetailPage({
     : null;
 
   return (
-    <main className="min-h-screen bg-gray-50 p-8">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-8 flex items-start justify-between">
+    <main className="min-h-screen bg-slate-50 px-6 py-10">
+      <div className="mx-auto max-w-6xl space-y-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <a href="/workflows" className="text-sm text-gray-600">
+            <Link
+              href="/workflows"
+              className="text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
               ← Back to workflows
-            </a>
-            <h1 className="mt-4 text-3xl font-bold text-gray-900">
+            </Link>
+
+            <h1 className="mt-4 text-3xl font-bold text-slate-900">
               {workflow.name}
             </h1>
-            <p className="mt-2 text-gray-600">
-              {workflow.description || "No description provided."}
+
+            <p className="mt-2 max-w-2xl text-slate-600">
+              {workflow.description || "No description added yet."}
             </p>
           </div>
 
-          <div className="flex gap-3">
-            <a
+          <div className="flex flex-wrap gap-3">
+            <Link
               href={`/workflows/${workflow.id}/edit`}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900"
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
             >
               Edit
-            </a>
+            </Link>
 
             <DeleteWorkflowButton workflowId={workflow.id} />
-          </div>
-        </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
-            <p className="text-sm text-gray-500">Status</p>
-            <h2 className="mt-2 text-2xl font-bold text-gray-900">
+            <div
+              className={`rounded-full border px-4 py-2 text-sm font-semibold ${getStatusClass(
+                workflow.status
+              )}`}
+            >
               {workflow.status}
-            </h2>
-          </div>
-
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
-            <p className="text-sm text-gray-500">Trigger</p>
-            <h2 className="mt-2 text-2xl font-bold text-gray-900">
-              {workflow.triggerType}
-            </h2>
-          </div>
-
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
-            <p className="text-sm text-gray-500">Recent Executions</p>
-            <h2 className="mt-2 text-2xl font-bold text-gray-900">
-              {workflow.executions.length}
-            </h2>
+            </div>
           </div>
         </div>
 
-        {workflow.triggerType === "WEBHOOK" ? (
-          <section className="mt-8 rounded-xl border border-gray-200 bg-white p-6">
-            <h2 className="text-xl font-semibold text-gray-900">
+        <section className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-xl border bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">Trigger</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">
+              {workflow.triggerType}
+            </p>
+          </div>
+
+          <div className="rounded-xl border bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">Steps</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">
+              {workflow.steps.length}
+            </p>
+          </div>
+
+          <div className="rounded-xl border bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">Executions</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">
+              {workflow.executions.length}
+            </p>
+          </div>
+        </section>
+
+        {webhookUrl && (
+          <section className="rounded-xl border bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-semibold text-slate-900">
               Webhook Trigger URL
             </h2>
 
-            {webhookUrl ? (
-              <>
-                <p className="mt-2 text-sm text-gray-600">
-                  Send a POST request with JSON data to this URL. The workflow
-                  must be ACTIVE before the webhook can run.
-                </p>
+            <p className="mt-2 text-sm text-slate-600">
+              Send a POST request to this URL to trigger the workflow.
+            </p>
 
-                <div className="mt-4 rounded-lg border border-gray-300 bg-gray-50 p-4">
-                  <code className="break-all text-sm text-gray-900">
-                    {webhookUrl}
-                  </code>
-                </div>
+            <pre className="mt-4 overflow-x-auto rounded-lg bg-slate-950 p-4 text-sm text-slate-100">
+              {webhookUrl}
+            </pre>
 
-                <pre className="mt-4 overflow-auto rounded-lg bg-black p-4 text-xs text-white">
+            <p className="mt-5 text-sm font-semibold text-slate-700">
+              Example curl
+            </p>
+
+            <pre className="mt-2 overflow-x-auto rounded-lg bg-slate-950 p-4 text-sm text-slate-100">
 {`curl -X POST ${webhookUrl} \\
   -H "Content-Type: application/json" \\
   -d '{
     "leadName": "John Smith",
     "email": "john@example.com",
+    "company": "Enterprise Cloud Inc",
     "message": "I am interested in your enterprise plan"
   }'`}
-                </pre>
-              </>
-            ) : (
-              <p className="mt-2 text-sm text-red-600">
-                This workflow does not have a webhook endpoint. Create a new
-                webhook workflow to generate one.
-              </p>
-            )}
+            </pre>
           </section>
-        ) : null}
+        )}
 
-        <section className="mt-8 rounded-xl border border-gray-200 bg-white p-6">
-          <h2 className="text-xl font-semibold text-gray-900">
+        <section className="rounded-xl border bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-900">
             Workflow Steps
           </h2>
 
@@ -148,56 +179,85 @@ export default async function WorkflowDetailPage({
             {workflow.steps.map((step) => (
               <div
                 key={step.id}
-                className="rounded-lg border border-gray-200 bg-gray-50 p-4"
+                className="rounded-lg border border-slate-200 p-4"
               >
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium text-gray-900">
-                    {step.position}. {step.name}
-                  </h3>
-                  <span className="rounded-full bg-white px-3 py-1 text-xs text-gray-700">
-                    {step.type}
-                  </span>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-slate-500">
+                      Step {step.position}
+                    </p>
+                    <h3 className="font-semibold text-slate-900">
+                      {step.name}
+                    </h3>
+                    <p className="text-sm text-slate-600">{step.type}</p>
+                  </div>
                 </div>
-
-                <pre className="mt-3 overflow-auto rounded-lg bg-black p-4 text-xs text-white">
-                  {JSON.stringify(step.config, null, 2)}
-                </pre>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="mt-8 rounded-xl border border-gray-200 bg-white p-6">
-          <h2 className="text-xl font-semibold text-gray-900">
+        <section className="rounded-xl border bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-900">
             Recent Executions
           </h2>
 
           {workflow.executions.length === 0 ? (
-            <p className="mt-4 text-sm text-gray-600">
-              No executions yet. Send a POST request to the webhook URL to
-              create your first execution.
+            <p className="mt-4 text-sm text-slate-600">
+              No executions yet. Trigger the webhook to create one.
             </p>
           ) : (
-            <div className="mt-5 space-y-3">
-              {workflow.executions.map((execution) => (
-                <div
-                  key={execution.id}
-                  className="rounded-lg border border-gray-200 p-4 text-sm"
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-gray-900">
-                      Execution {execution.id}
-                    </p>
-                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">
-                      {execution.status}
-                    </span>
-                  </div>
+            <div className="mt-5 overflow-hidden rounded-lg border">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-100 text-slate-600">
+                  <tr>
+                    <th className="px-4 py-3">Execution</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Created</th>
+                    <th className="px-4 py-3">Finished</th>
+                    <th className="px-4 py-3">View</th>
+                  </tr>
+                </thead>
 
-                  <p className="mt-2 text-gray-600">
-                    Created: {execution.createdAt.toLocaleString()}
-                  </p>
-                </div>
-              ))}
+                <tbody className="divide-y bg-white">
+                  {workflow.executions.map((execution) => (
+                    <tr key={execution.id}>
+                      <td className="px-4 py-3 font-mono text-xs text-slate-700">
+                        {execution.id}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-semibold ${getExecutionStatusClass(
+                            execution.status
+                          )}`}
+                        >
+                          {execution.status}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-3 text-slate-600">
+                        {execution.createdAt.toLocaleString()}
+                      </td>
+
+                      <td className="px-4 py-3 text-slate-600">
+                        {execution.finishedAt
+                          ? execution.finishedAt.toLocaleString()
+                          : "-"}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/executions/${execution.id}`}
+                          className="font-semibold text-blue-600 hover:text-blue-700"
+                        >
+                          View details
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </section>

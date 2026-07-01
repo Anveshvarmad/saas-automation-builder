@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
+import { enqueueWorkflowExecution } from "../../../../lib/workflow-queue";
 
 export async function POST(
   request: Request,
@@ -92,9 +93,11 @@ export async function POST(
       return createdExecution;
     });
 
+    await enqueueWorkflowExecution(execution.id);
+
     return NextResponse.json(
       {
-        message: "Webhook accepted.",
+        message: "Webhook accepted and queued.",
         execution: {
           id: execution.id,
           status: execution.status,
