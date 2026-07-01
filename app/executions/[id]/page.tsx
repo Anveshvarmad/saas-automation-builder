@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "../../../lib/prisma";
 import { getCurrentTenant } from "../../../lib/tenant";
+import RetryExecutionButton from "./retry-execution-button";
 
 function formatJson(value: unknown) {
   if (value === null || value === undefined) {
@@ -84,13 +85,19 @@ export default async function ExecutionDetailPage({
             </p>
           </div>
 
-          <div
-            className={`rounded-full border px-4 py-2 text-sm font-semibold ${getStatusClass(
-              execution.status
-            )}`}
-          >
-            {execution.status}
-          </div>
+          <div className="flex flex-col items-start gap-3 md:items-end">
+  <div
+    className={`rounded-full border px-4 py-2 text-sm font-semibold ${getStatusClass(
+      execution.status
+    )}`}
+  >
+    {execution.status}
+  </div>
+
+  {execution.status === "FAILED" && (
+    <RetryExecutionButton executionId={execution.id} />
+  )}
+</div>
         </div>
 
         <section className="grid gap-4 md:grid-cols-4">

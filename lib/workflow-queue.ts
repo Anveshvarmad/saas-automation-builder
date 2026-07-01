@@ -35,7 +35,7 @@ export async function enqueueWorkflowExecution(executionId: string) {
       executionId,
     },
     {
-      jobId: executionId,
+      jobId: `${executionId}-${Date.now()}`,
     }
   );
 }
