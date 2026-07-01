@@ -1,6 +1,15 @@
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
 import { getCurrentTenant } from "../../../lib/tenant";
+
+function createWebhookSecret() {
+  return `wh_${crypto.randomBytes(24).toString("hex")}`;
+}
+
+function hashValue(value: string) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
 
 export async function GET() {
   const tenant = await getCurrentTenant();
@@ -14,6 +23,7 @@ export async function GET() {
       organizationId: tenant.organization.id,
     },
     include: {
+      webhook: true,
       steps: {
         orderBy: {
           position: "asc",
@@ -61,6 +71,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const webhookSecret = createWebhookSecret();
+
     const workflow = await prisma.workflow.create({
       data: {
         organizationId: tenant.organization.id,
@@ -81,8 +93,19 @@ export async function POST(request: Request) {
             },
           ],
         },
+        webhook:
+          triggerType === "WEBHOOK"
+            ? {
+                create: {
+                  tokenHash: hashValue(webhookSecret),
+                  tokenPrefix: webhookSecret.slice(0, 12),
+                  isActive: true,
+                },
+              }
+            : undefined,
       },
       include: {
+        webhook: true,
         steps: true,
       },
     });
@@ -95,12 +118,15 @@ export async function POST(request: Request) {
         metadata: {
           workflowId: workflow.id,
           workflowName: workflow.name,
+          triggerType: workflow.triggerType,
         },
       },
     });
 
     return NextResponse.json({ workflow }, { status: 201 });
   } catch (error) {
+    console.error("Create workflow error:", error);
+
     return NextResponse.json(
       {
         error:

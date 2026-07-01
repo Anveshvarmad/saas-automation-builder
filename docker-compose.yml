@@ -9,6 +9,7 @@ services:
       - /app/node_modules
     environment:
       NODE_ENV: development
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/saas_builder
       REDIS_URL: redis://redis:6379
     depends_on:
