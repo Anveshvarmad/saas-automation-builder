@@ -191,6 +191,13 @@ export default async function WorkflowDetailPage({
                     </h3>
                     <p className="text-sm text-slate-600">{step.type}</p>
                   </div>
+
+                  <Link
+                    href={`/workflows/${workflow.id}/steps/${step.id}/edit`}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                  >
+                    Edit step
+                  </Link>
                 </div>
               </div>
             ))}
