@@ -4,24 +4,6 @@ A full-stack AI workflow automation platform that allows users to create workflo
 
 This project was built to demonstrate real-world SaaS backend architecture including authentication, multi-tenancy, secure webhooks, background workers, AI integration, execution observability, retry handling, and Docker-based local infrastructure.
 
----
-
-## Demo
-
-Local app:
-
-```text
-http://localhost:3000
-```
-
-Demo flow:
-
-```text
-Sign up → Create workflow → Generate webhook secret → Trigger webhook → Process with OpenAI → View execution output
-```
-
----
-
 ## Features
 
 - User signup and login with custom session authentication
